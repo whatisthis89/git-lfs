@@ -35,7 +35,7 @@ func uploadsBetweenRefs(ctx *uploadContext, left string, right string) {
 		Panic(err, "Error scanning for Git LFS files")
 	}
 
-	ctx.Upload(pointers)
+	ctx.Upload(nil, pointers)
 }
 
 func uploadsBetweenRefAndRemote(ctx *uploadContext, refnames []string) {
@@ -61,7 +61,7 @@ func uploadsBetweenRefAndRemote(ctx *uploadContext, refnames []string) {
 			Panic(err, "Error scanning for Git LFS files in the %q ref", ref.Name)
 		}
 
-		ctx.Upload(pointers)
+		ctx.Upload(lfs.NewTransferMetadata(ref.Name), pointers)
 	}
 }
 
@@ -72,7 +72,7 @@ func uploadsWithObjectIDs(ctx *uploadContext, oids []string) {
 		pointers[idx] = &lfs.WrappedPointer{Pointer: &lfs.Pointer{Oid: oid}}
 	}
 
-	ctx.Upload(pointers)
+	ctx.Upload(nil, pointers)
 }
 
 func refsByNames(refnames []string) ([]*git.Ref, error) {
@@ -142,7 +142,7 @@ func pushCommand(cmd *cobra.Command, args []string) {
 			return
 		}
 
-		left, right := decodeRefs(string(refsData))
+		left, right, _ := decodeRefs(string(refsData))
 		if left == prePushDeleteBranch {
 			return
 		}

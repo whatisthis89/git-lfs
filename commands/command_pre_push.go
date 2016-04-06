@@ -69,7 +69,7 @@ func prePushCommand(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		left, right := decodeRefs(line)
+		left, right, destRef := decodeRefs(line)
 		if left == prePushDeleteBranch {
 			continue
 		}
@@ -79,25 +79,28 @@ func prePushCommand(cmd *cobra.Command, args []string) {
 			Panic(err, "Error scanning for Git LFS files")
 		}
 
-		ctx.Upload(pointers)
+		ctx.Upload(lfs.NewTransferMetadata(destRef), pointers)
 	}
 }
 
-// decodeRefs pulls the sha1s out of the line read from the pre-push
+// decodeRefs pulls the sha1s and destination ref out of the line read from the pre-push
 // hook's stdin.
-func decodeRefs(input string) (string, string) {
+func decodeRefs(input string) (left, right, destRef string) {
 	refs := strings.Split(strings.TrimSpace(input), " ")
-	var left, right string
 
 	if len(refs) > 1 {
 		left = refs[1]
+	}
+
+	if len(refs) > 2 {
+		destRef = refs[2]
 	}
 
 	if len(refs) > 3 {
 		right = "^" + refs[3]
 	}
 
-	return left, right
+	return
 }
 
 func init() {

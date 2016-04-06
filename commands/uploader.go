@@ -21,7 +21,7 @@ func newUploadContext() *uploadContext {
 	}
 }
 
-func (c *uploadContext) Upload(unfilteredPointers []*lfs.WrappedPointer) {
+func (c *uploadContext) Upload(meta *lfs.TransferMetadata, unfilteredPointers []*lfs.WrappedPointer) {
 	filtered := c.filterUploadedObjects(noSkip, unfilteredPointers)
 
 	totalSize := int64(0)
@@ -29,7 +29,7 @@ func (c *uploadContext) Upload(unfilteredPointers []*lfs.WrappedPointer) {
 		totalSize += p.Size
 	}
 
-	uploadQueue := lfs.NewUploadQueue(len(filtered), totalSize, c.DryRun)
+	uploadQueue := lfs.NewUploadQueue(len(filtered), totalSize, c.DryRun, meta)
 
 	if c.DryRun {
 		for _, pointer := range filtered {
