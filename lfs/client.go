@@ -830,7 +830,7 @@ func normalizeRef(ref string) string {
 	if len(ref) == 0 || ref == "HEAD" {
 		return ""
 	}
-	if strings.HasPrefix("refs/heads/", ref) {
+	if strings.HasPrefix(ref, "refs/") {
 		return ref
 	}
 	return "refs/heads/" + ref

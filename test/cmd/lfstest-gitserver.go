@@ -127,6 +127,16 @@ type lfsError struct {
 	Message string
 }
 
+type lfsMeta struct {
+	Ref string `json:"ref"`
+}
+
+type batchReq struct {
+	Operation string      `json:"operation"`
+	Objects   []lfsObject `json:"objects"`
+	Meta      lfsMeta     `json:"meta"`
+}
+
 // handles any requests with "{name}.server.git/info/lfs" in the path
 func lfsHandler(w http.ResponseWriter, r *http.Request) {
 	repo, err := repoFromLfsUrl(r.URL.Path)
@@ -277,11 +287,6 @@ func lfsBatchHandler(w http.ResponseWriter, r *http.Request, repo string) {
 		}
 	}
 
-	type batchReq struct {
-		Operation string      `json:"operation"`
-		Objects   []lfsObject `json:"objects"`
-	}
-
 	buf := &bytes.Buffer{}
 	tee := io.TeeReader(r.Body, buf)
 	var objs batchReq
@@ -294,6 +299,11 @@ func lfsBatchHandler(w http.ResponseWriter, r *http.Request, repo string) {
 
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if failsMetaCheck(objs) {
+		w.Write([]byte(fmt.Sprintf("Fails meta check with: %v", objs.Meta)))
+		w.WriteHeader(403)
 	}
 
 	res := []lfsObject{}
@@ -619,11 +629,43 @@ func skipIfBadAuth(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
+func failsMetaCheck(objs batchReq) bool {
+	noCheck := true
+
+	for _, obj := range objs.Objects {
+		if obj.Oid == enableMeta {
+			noCheck = false
+		}
+	}
+
+	if noCheck {
+		return false
+	}
+
+	expectedOid := oidFor("meta-test: " + objs.Meta.Ref)
+	failed := true
+
+	for _, obj := range objs.Objects {
+		if obj.Oid == expectedOid {
+			failed = false
+		}
+	}
+
+	return failed
+}
+
+func oidFor(content string) string {
+	h := sha256.New()
+	h.Write([]byte(content))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+var enableMeta string
+
 func init() {
+	enableMeta = oidFor("meta-test")
 	oidHandlers = make(map[string]string)
 	for _, content := range contentHandlers {
-		h := sha256.New()
-		h.Write([]byte(content))
-		oidHandlers[hex.EncodeToString(h.Sum(nil))] = content
+		oidHandlers[oidFor(content)] = content
 	}
 }
